@@ -1,5 +1,10 @@
 spring:
   application:
     name: tenis-club-reservations
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.yml
