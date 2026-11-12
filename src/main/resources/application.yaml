@@ -1,3 +1,5 @@
 spring:
   application:
     name: tenis-club-reservations
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.yml
