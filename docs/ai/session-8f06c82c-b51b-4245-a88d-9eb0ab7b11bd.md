@@ -1,0 +1,642 @@
+# Repository AGENTS.md guidance
+
+**Session ID:** ses_e2befbdc6ffeivw4Y1zbeW5YMC
+**Created:** 11/13/2026, 9:39:57 AM
+**Updated:** 11/13/2026, 9:40:55 AM
+
+---
+
+## User
+
+Create or update `AGENTS.md` for this repository.
+
+The goal is a compact instruction file that helps future OpenCode sessions avoid mistakes and ramp up quickly. Every line should answer: "Would an agent likely miss this without help?" If not, leave it out.
+
+User-provided focus or constraints (honor these):
+Key repository instructions:
+
+- use Java 25 and Maven Wrapper
+- run ./mvnw clean verify to validate changes
+- use Spring boot, JPA with Hibernate, in-memory H2 database
+- implement DAO layer manually using JPA EntityManager
+- do not use Spring Data JPA (JpaRepository, CrudRepository) to implement DAO layer
+- ensure every REST endpoint start with /api
+- write unit and integration tests targeting at least 90% code coverage
+- follow SOLID principles without overengineering where appropriate
+- prefer simple, explicit, readable, testable code
+- use liquibase for schema migrations
+- keep hibernate configured as it is
+- prefer constructor injection, thin controllers, business logic in service layer
+- use DTOs for requests and responses
+- keep UML diagrams up to date as the implementation involves
+
+## How to investigate
+
+Read the highest-value sources first:
+- `README*`, root manifests, workspace config, lockfiles
+- build, test, lint, formatter, typecheck, and codegen config
+- CI workflows and pre-commit / task runner config
+- existing instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`)
+- repo-local OpenCode config such as `opencode.json`
+
+If architecture is still unclear after reading config and docs, inspect a small number of representative code files to find the real entrypoints, package boundaries, and execution flow. Prefer reading the files that explain how the system is wired together over random leaf files.
+
+Prefer executable sources of truth over prose. If docs conflict with config or scripts, trust the executable source and only keep what you can verify.
+
+## What to extract
+
+Look for the highest-signal facts for an agent working in this repo:
+- exact developer commands, especially non-obvious ones
+- how to run a single test, a single package, or a focused verification step
+- required command order when it matters, such as `lint -> typecheck -> test`
+- monorepo or multi-package boundaries, ownership of major directories, and the real app/library entrypoints
+- framework or toolchain quirks: generated code, migrations, codegen, build artifacts, special env loading, dev servers, infra deploy flow
+- testing quirks: fixtures, integration test prerequisites, snapshot workflows, required services, flaky or expensive suites
+- important constraints from existing instruction files worth preserving
+
+Good `AGENTS.md` content is usually hard-earned context that took reading multiple files to infer.
+
+## Questions
+
+Only ask the user questions if the repo cannot answer something important. Use the `question` tool for one short batch at most.
+
+Good questions:
+- undocumented team conventions
+- branch / PR / release expectations
+- missing setup or test prerequisites that are known but not written down
+
+Do not ask about anything the repo already makes clear.
+
+## Writing rules
+
+Include only high-signal, repo-specific guidance such as:
+- exact commands and shortcuts the agent would otherwise guess wrong
+- architecture notes that are not obvious from filenames
+- conventions that differ from language or framework defaults
+- setup requirements, environment quirks, and operational gotchas
+- references to existing instruction sources that matter
+
+Exclude:
+- generic software advice
+- long tutorials or exhaustive file trees
+- obvious language conventions
+- speculative claims or anything you could not verify
+- content better stored in another file referenced via `opencode.json` `instructions`
+
+When in doubt, omit.
+
+Prefer short sections and bullets. If the repo is simple, keep the file simple. If the repo is large, summarize the few structural facts that actually change how an agent should work.
+
+If `AGENTS.md` already exists at `/home/matus/Projects/tenis-club-reservations`, improve it in place rather than rewriting blindly. Preserve verified useful guidance, delete fluff or stale claims, and reconcile it with the current codebase.
+
+
+---
+
+## Assistant
+
+**Tool: skill**
+
+**Input:**
+```json
+{
+  "id": "writing-for-agents"
+}
+```
+
+<skill_content name="writing-for-agents">
+# Skill: writing-for-agents
+
+Reference for writing any document an agent consumes: a skill, an `AGENTS.md` / `CLAUDE.md`, a doc reached by a pointer. The packaging differs; the writing does not: the same levers make each one predictable, since the agent takes the same _process_ every run rather than producing the same output.
+
+When the document you're writing is a skill, read [`SKILL-MECHANICS.md`](SKILL-MECHANICS.md) for frontmatter, invocation choice, and router skills.
+
+## Context pointers
+
+A **context pointer** is a reference held in the agent's context that names some out-of-context material and encodes the condition for reaching it. A skill's description is one; a line in `AGENTS.md` naming a doc is the same object. The pointer's _wording_, not its target, decides when the agent reaches the material, and how reliably. A must-have target behind a weakly worded pointer is a variance bug: sharpen the wording first, and inline the material only if sharpening fails.
+
+A pointer does two jobs: state what the material is, and list the **branches** that should trigger reaching it (a branch is a distinct case the document handles, so different runs take different paths through it). Every word of an always-loaded pointer costs on every turn, so it earns even harder pruning than the body:
+
+- **Front-load the leading word**: the pointer is where it does its triggering work.
+- **One trigger per branch.** Synonyms that rename a single branch are one branch written twice; collapse them and keep only genuinely distinct branches.
+- **Cut identity the body already carries.**
+
+## The two loads
+
+Every document and pointer you add spends one of two budgets:
+
+- **Context load** is the cost of always-loaded material on the agent's window: an `AGENTS.md` line, a skill description, anything sitting in context every turn, spending tokens and attention whether or not it fires.
+- **Cognitive load** is the cost on the human: which documents exist and when to reach for each. The human is the index. Not a cost to minimise: it is the price of human agency; spend it where human judgement matters, remove it where it does not.
+
+Material reached only through a pointer escapes context load at the price of the pointer's own line; material with no pointer at all rides entirely on cognitive load.
+
+## Information hierarchy
+
+A document is built from two content types: **steps** (the ordered actions the agent performs) and **reference** (definitions, rules, facts consulted on demand). The two mix freely: all steps (a recipe), all reference (a review's rules, this skill), or both. The core decision is where each piece sits on the **information hierarchy**, a ladder ranked by how immediately the agent needs the material:
+
+1. **In-file step** is the primary tier: what the agent does, in order.
+2. **In-file reference** is consulted on demand. Often a legitimately flat peer-set (every rule of a review on one rung), which is a fine arrangement, not a smell.
+3. **Disclosed reference** is pushed out into a separate file, reached by a context pointer, loaded only when the pointer fires. Spans a sibling file in the same folder through fully external reference that lives anywhere and any document can point at.
+
+Push too little down and the top bloats; push too much and you hide material the agent actually needs. That tension is the whole decision.
+
+**Progressive disclosure** is the move down the ladder (out of the main file and behind a pointer) so the top stays legible. Not primarily a token optimisation: it is how the hierarchy is protected. Branching is the cleanest disclosure test: inline what every branch needs, and push behind a pointer what only some branches reach. When a document has steps, in-file reference that should be disclosed buries them and turns attending to them into a coin-flip: a variance lever, not just a legibility one.
+
+**Co-location** is the within-file companion: where the ladder decides _how far down_ a piece sits, co-location decides _what sits beside it_ once there. Keep a concept's definition, rules, and caveats under one heading rather than scattered, so reading one part brings its neighbours with it. The test: the document should read like documentation written for the agent. Grouped material reads that way; scattered material does not. (Distinct from duplication: that repeats one meaning in two places; scattering fragments one meaning across many.)
+
+**Sprawl** is the failure mode here: a document simply too long, even when every line is live and unique. Attention thins across the excess, and every extra line is one more to keep relevant. The cure is the ladder: disclose reference behind pointers, and split by branch or sequence so each path carries only what it needs.
+
+## Steps and completion criteria
+
+Every step ends on a **completion criterion**, the condition that tells the agent the work is done. Two properties make it a lever:
+
+- **Clarity**: can the agent tell done from not-done? A vague bound ("understanding reached") invites **premature completion**: ending the step before it is genuinely done, attention slipping to _being done_. The visible steps still ahead (the **post-completion steps**) supply the pull; the criterion's clarity is the resistance. Defend in order: **sharpen the bound first** (local and cheap); only if it is irreducibly fuzzy _and_ you observe the rush, hide the later steps by splitting the sequence. Hiding only works across a real context boundary (a hand-off or a subagent dispatch; an inline call leaves the later steps in context and clears nothing).
+- **Demand**: how much it requires. "Every modified model accounted for" forces thorough work where "produce a change list" does not. Demand drives **legwork** (the digging the agent does within the work, latent in the wording rather than written as its own step), and it is not step-bound: "every rule applied" binds a body of flat reference just as "every step done" binds a sequence, which is how an all-reference document still carries an exhaustiveness bar.
+
+The strongest criteria are both checkable and exhaustive.
+
+## When to split
+
+Splitting one document into two spends one of the two loads, so split only when the cut earns it:
+
+- **By sequence**: split a run of steps where the post-completion steps tempt the agent to rush the one in front of it. Keeping them out of view drives more legwork on the current task. Beware the reverse: merging sequences exposes each step's later steps to what follows, inviting premature completion.
+- **By invocation**, skill-specific: see [`SKILL-MECHANICS.md`](SKILL-MECHANICS.md).
+
+## Leading words
+
+A **leading word** is a compact concept already living in the model's pretraining that the agent thinks with while running the document (_lesson_, _fog of war_, _tracer bullets_). Repeated as a token, never as a sentence, it accumulates a distributed definition and anchors a whole region of behaviour in the fewest tokens, by recruiting priors the model already holds. Coining your own works if you define it clearly, but a made-up word recruits no priors: you pay in definition tokens what a pretrained word gives free; reach for an existing word first.
+
+It anchors twice. In the body, _execution_: the agent reaches for the same behaviour every time the word appears, and inside flat reference it focuses attention on a class of thing to look for. In a pointer, _invocation_: when the same word lives in your prompts, your docs, and your codebase, the agent links that shared language to the material and reaches it more reliably.
+
+Hunt for opportunities to refactor with leading words. A triad spelled out at three sites, a pointer spending a sentence to gesture at one idea. Each is a passage begging to collapse into a single token:
+
+- "fast, deterministic, low-overhead" → _tight_ (a _tight_ loop).
+- "a loop you believe in" → _red_, turning a fuzzy gate into a binary observable state (the loop goes _red_ on the bug, or it doesn't).
+
+You win twice: fewer tokens, and a sharper hook for the agent to hang its thinking on. Assume every document is carrying restatements that leading words retire. Go find them.
+
+**Negation** is the failure mode beside this lever: steering by prohibition drags the forbidden behaviour into context and makes it _more_ available, not less. _Don't think of an elephant_, and the elephant is all there is; the negation is a weak modifier the strongly-activated concept overruns, so the ban half-reads as an instruction to do the thing. Prompt the **positive**: state the target behaviour ("write one-line comments") so the banned one is never spoken. A prohibition earns its place only as a hard guardrail you cannot phrase positively; even then, pair it with the positive target so attention lands on what to do.
+
+## Pruning
+
+- Keep each meaning in a **single source of truth**: one authoritative place, so changing the behaviour is a one-place edit. **Duplication** (the same meaning in more than one place) costs maintenance and tokens, and inflates a meaning's prominence on the ladder past its real rank. (The accidental inverse of a leading word, which repeats a token on purpose, never the meaning.)
+- The **environment** is a source of truth too (`package.json` scripts, config files, the directory layout, `--help` output), and a document that restates it is a **cache**: a copy of a lookup, earning its load only when the lookup is expensive. Cache what the agent cannot find by looking: the unwritten convention, the reason behind a choice, the gotcha no config confesses. Leave the one-file, one-command lookups to the environment, where they cannot go stale.
+- Check every line for **relevance**: does it still bear on what the document does? A line loses relevance by never bearing on the task (mere exposition, or a branch that should be disclosed) or by going stale as the behaviour or world it describes changes. Shorter documents are easier to keep relevant. Without a pruning discipline the default fate is **sediment**: stale layers that settle because adding feels safe and removing feels risky, until you must core down through them to find what is still live.
+- Hunt **no-ops** sentence by sentence: an instruction the model already obeys by default pays load to say nothing. The test (does it change behaviour versus the default?) is model-relative, not reader-relative: two people disagreeing about a no-op disagree about the default, and settle it by running the document, not by debate. When a sentence fails, delete the whole sentence rather than trim words from it. The test also grades leading words: a word too weak to beat the default (_be thorough_ when the agent is already thorough-ish) is a no-op, and the fix is a stronger word (_relentless_), not a different technique.
+
+Base directory for this skill: /home/matus/.agents/skills/writing-for-agents
+Relative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.
+Note: file list is sampled.
+
+<skill_files>
+<file>/home/matus/.agents/skills/writing-for-agents/SKILL-MECHANICS.md</file>
+<file>/home/matus/.agents/skills/writing-for-agents/agents/openai.yaml</file>
+</skill_files>
+</skill_content>
+
+---
+
+## Assistant
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "**/AGENTS.md",
+  "hidden": true
+}
+```
+
+No files found
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "*",
+  "hidden": true
+}
+```
+
+/home/matus/Projects/tenis-club-reservations/HELP.md
+/home/matus/Projects/tenis-club-reservations/.github/workflows/ci.yml
+/home/matus/Projects/tenis-club-reservations/src/main/resources/application.yaml
+/home/matus/Projects/tenis-club-reservations/.gitignore
+/home/matus/Projects/tenis-club-reservations/src/main/resources/db/changelog/db.changelog-master.yaml
+/home/matus/Projects/tenis-club-reservations/src/main/java/com/example/tenisclubreservations/TenisClubReservationsApplication.java
+/home/matus/Projects/tenis-club-reservations/src/test/java/com/example/tenisclubreservations/TenisClubReservationsApplicationTests.java
+/home/matus/Projects/tenis-club-reservations/.gitattributes
+/home/matus/Projects/tenis-club-reservations/.mvn/wrapper/maven-wrapper.properties
+/home/matus/Projects/tenis-club-reservations/pom.xml
+/home/matus/Projects/tenis-club-reservations/mvnw
+/home/matus/Projects/tenis-club-reservations/mvnw.cmd
+/home/matus/Projects/tenis-club-reservations/target/classes/application.yaml
+/home/matus/Projects/tenis-club-reservations/target/tenis-club-reservations-0.0.1-SNAPSHOT.jar.original
+/home/matus/Projects/tenis-club-reservations/.idea/workspace.xml
+/home/matus/Projects/tenis-club-reservations/.idea/compiler.xml
+/home/matus/Projects/tenis-club-reservations/.idea/misc.xml
+/home/matus/Projects/tenis-club-reservations/.idea/.gitignore
+/home/matus/Projects/tenis-club-reservations/.idea/go.imports.xml
+/home/matus/Projects/tenis-club-reservations/.idea/jarRepositories.xml
+/home/matus/Projects/tenis-club-reservations/.idea/vcs.xml
+/home/matus/Projects/tenis-club-reservations/.idea/copilot.data.migration.ask2agent.xml
+/home/matus/Projects/tenis-club-reservations/.idea/encodings.xml
+/home/matus/Projects/tenis-club-reservations/target/tenis-club-reservations-0.0.1-SNAPSHOT.jar
+/home/matus/Projects/tenis-club-reservations/target/maven-archiver/pom.properties
+/home/matus/Projects/tenis-club-reservations/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
+/home/matus/Projects/tenis-club-reservations/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
+/home/matus/Projects/tenis-club-reservations/target/surefire-reports/com.example.tenisclubreservations.TenisClubReservationsApplicationTests.txt
+/home/matus/Projects/tenis-club-reservations/target/surefire-reports/TEST-com.example.tenisclubreservations.TenisClubReservationsApplicationTests.xml
+/home/matus/Projects/tenis-club-reservations/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst
+/home/matus/Projects/tenis-club-reservations/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/inputFiles.lst
+/home/matus/Projects/tenis-club-reservations/target/classes/db/changelog/db.changelog-master.yaml
+/home/matus/Projects/tenis-club-reservations/target/classes/com/example/tenisclubreservations/TenisClubReservationsApplication.class
+/home/matus/Projects/tenis-club-reservations/target/test-classes/com/example/tenisclubreservations/TenisClubReservationsApplicationTests.class
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": ".github/workflows/*",
+  "hidden": true
+}
+```
+
+/home/matus/Projects/tenis-club-reservations/.github/workflows/ci.yml
+
+**Tool: shell**
+
+**Input:**
+```json
+{
+  "command": "git status --short"
+}
+```
+
+(no output)
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "**/*",
+  "path": "src",
+  "limit": 100
+}
+```
+
+/home/matus/Projects/tenis-club-reservations/src/main/resources/application.yaml
+/home/matus/Projects/tenis-club-reservations/src/main/resources/db/changelog/db.changelog-master.yaml
+/home/matus/Projects/tenis-club-reservations/src/test/java/com/example/tenisclubreservations/TenisClubReservationsApplicationTests.java
+/home/matus/Projects/tenis-club-reservations/src/main/java/com/example/tenisclubreservations/TenisClubReservationsApplication.java
+
+---
+
+## Assistant
+
+The repository is currently a minimal Spring Boot skeleton, so I’m distinguishing the requested conventions from what the build already enforces.
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "path": "pom.xml"
+}
+```
+
+Read file pom.xml, lines 1-140
+1: <?xml version="1.0" encoding="UTF-8"?>
+2: <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+3:          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+4:     <modelVersion>4.0.0</modelVersion>
+5:     <parent>
+6:         <groupId>org.springframework.boot</groupId>
+7:         <artifactId>spring-boot-starter-parent</artifactId>
+8:         <version>4.1.2</version>
+9:         <relativePath/> <!-- lookup parent from repository -->
+10:     </parent>
+11:     <groupId>com.example</groupId>
+12:     <artifactId>tenis-club-reservations</artifactId>
+13:     <version>0.0.1-SNAPSHOT</version>
+14:     <name>tenis-club-reservations</name>
+15:     <description>tenis-club-reservations</description>
+16:     <url/>
+17:     <licenses>
+18:         <license/>
+19:     </licenses>
+20:     <developers>
+21:         <developer/>
+22:     </developers>
+23:     <scm>
+24:         <connection/>
+25:         <developerConnection/>
+26:         <tag/>
+27:         <url/>
+28:     </scm>
+29:     <properties>
+30:         <java.version>25</java.version>
+31:     </properties>
+32:     <dependencies>
+33:         <dependency>
+34:             <groupId>org.springframework.boot</groupId>
+35:             <artifactId>spring-boot-h2console</artifactId>
+36:         </dependency>
+37:         <dependency>
+38:             <groupId>org.springframework.boot</groupId>
+39:             <artifactId>spring-boot-starter-data-jpa</artifactId>
+40:         </dependency>
+41:         <dependency>
+42:             <groupId>org.springframework.boot</groupId>
+43:             <artifactId>spring-boot-starter-liquibase</artifactId>
+44:         </dependency>
+45:         <dependency>
+46:             <groupId>org.springframework.boot</groupId>
+47:             <artifactId>spring-boot-starter-security</artifactId>
+48:         </dependency>
+49:         <dependency>
+50:             <groupId>org.springframework.boot</groupId>
+51:             <artifactId>spring-boot-starter-validation</artifactId>
+52:         </dependency>
+53:         <dependency>
+54:             <groupId>org.springframework.boot</groupId>
+55:             <artifactId>spring-boot-starter-webmvc</artifactId>
+56:         </dependency>
+57: 
+58:         <dependency>
+59:             <groupId>com.h2database</groupId>
+60:             <artifactId>h2</artifactId>
+61:             <scope>runtime</scope>
+62:         </dependency>
+63:         <dependency>
+64:             <groupId>org.projectlombok</groupId>
+65:             <artifactId>lombok</artifactId>
+66:             <optional>true</optional>
+67:         </dependency>
+68:         <dependency>
+69:             <groupId>org.springframework.boot</groupId>
+70:             <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+71:             <scope>test</scope>
+72:         </dependency>
+73:         <dependency>
+74:             <groupId>org.springframework.boot</groupId>
+75:             <artifactId>spring-boot-starter-liquibase-test</artifactId>
+76:             <scope>test</scope>
+77:         </dependency>
+78:         <dependency>
+79:             <groupId>org.springframework.boot</groupId>
+80:             <artifactId>spring-boot-starter-security-test</artifactId>
+81:             <scope>test</scope>
+82:         </dependency>
+83:         <dependency>
+84:             <groupId>org.springframework.boot</groupId>
+85:             <artifactId>spring-boot-starter-validation-test</artifactId>
+86:             <scope>test</scope>
+87:         </dependency>
+88:         <dependency>
+89:             <groupId>org.springframework.boot</groupId>
+90:             <artifactId>spring-boot-starter-webmvc-test</artifactId>
+91:             <scope>test</scope>
+92:         </dependency>
+93:     </dependencies>
+94: 
+95:     <build>
+96:         <plugins>
+97:             <plugin>
+98:                 <groupId>org.springframework.boot</groupId>
+99:                 <artifactId>spring-boot-maven-plugin</artifactId>
+100:             </plugin>
+101:             <plugin>
+102:                 <groupId>org.apache.maven.plugins</groupId>
+103:                 <artifactId>maven-compiler-plugin</artifactId>
+104:                 <executions>
+105:                     <execution>
+106:                         <id>default-compile</id>
+107:                         <phase>compile</phase>
+108:                         <goals>
+109:                             <goal>compile</goal>
+110:                         </goals>
+111:                         <configuration>
+112:                             <annotationProcessorPaths>
+113:                                 <path>
+114:                                     <groupId>org.projectlombok</groupId>
+115:                                     <artifactId>lombok</artifactId>
+116:                                 </path>
+117:                             </annotationProcessorPaths>
+118:                         </configuration>
+119:                     </execution>
+120:                     <execution>
+121:                         <id>default-testCompile</id>
+122:                         <phase>test-compile</phase>
+123:                         <goals>
+124:                             <goal>testCompile</goal>
+125:                         </goals>
+126:                         <configuration>
+127:                             <annotationProcessorPaths>
+128:                                 <path>
+129:                                     <groupId>org.projectlombok</groupId>
+130:                                     <artifactId>lombok</artifactId>
+131:                                 </path>
+132:                             </annotationProcessorPaths>
+133:                         </configuration>
+134:                     </execution>
+135:                 </executions>
+136:             </plugin>
+137:         </plugins>
+138:     </build>
+139: 
+140: </project>
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "path": "src/main/resources/application.yaml"
+}
+```
+
+Read file src/main/resources/application.yaml, lines 1-7
+1: spring:
+2:   application:
+3:     name: tenis-club-reservations
+4: 
+5:   jpa:
+6:     hibernate:
+7:       ddl-auto: validate
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "path": ".github/workflows/ci.yml"
+}
+```
+
+Read file .github/workflows/ci.yml, lines 1-27
+1: name: CI
+2: 
+3: on:
+4:   pull_request:
+5:   push:
+6:     branches:
+7:       - main
+8: 
+9: permissions:
+10:   contents: read
+11: 
+12: jobs:
+13:   build:
+14:     runs-on: ubuntu-latest
+15: 
+16:     steps:
+17:       - uses: actions/checkout@v4
+18: 
+19:       - name: Set up Java 25
+20:         uses: actions/setup-java@v5
+21:         with:
+22:           distribution: temurin
+23:           java-version: '25'
+24:           cache: maven
+25: 
+26:       - name: Build and test
+27:         run: ./mvnw clean verify
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "path": "src/main/resources/db/changelog/db.changelog-master.yaml"
+}
+```
+
+Read file src/main/resources/db/changelog/db.changelog-master.yaml, lines 1-1
+1: databaseChangeLog: []
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "path": "HELP.md"
+}
+```
+
+Read file HELP.md, lines 1-36
+1: # Getting Started
+2: 
+3: ### Reference Documentation
+4: 
+5: For further reference, please consider the following sections:
+6: 
+7: * [Official Apache Maven documentation](https://maven.apache.org/guides/index.html)
+8: * [Spring Boot Maven Plugin Reference Guide](https://docs.spring.io/spring-boot/4.1.2/maven-plugin)
+9: * [Create an OCI image](https://docs.spring.io/spring-boot/4.1.2/maven-plugin/build-image.html)
+10: * [Spring Data JPA](https://docs.spring.io/spring-boot/4.1.2/reference/data/sql.html#data.sql.jpa-and-spring-data)
+11: * [Liquibase Migration](https://docs.spring.io/spring-boot/4.1.2/how-to/data-initialization.html#howto.data-initialization.migration-tool.liquibase)
+12: * [Spring Security](https://docs.spring.io/spring-boot/4.1.2/reference/web/spring-security.html)
+13: * [Validation](https://docs.spring.io/spring-boot/4.1.2/reference/io/validation.html)
+14: * [Spring Web](https://docs.spring.io/spring-boot/4.1.2/reference/web/servlet.html)
+15: 
+16: ### Guides
+17: 
+18: The following guides illustrate how to use some features concretely:
+19: 
+20: * [Accessing Data with JPA](https://spring.io/guides/gs/accessing-data-jpa/)
+21: * [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
+22: * [Spring Boot and OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2/)
+23: * [Authenticating a User with LDAP](https://spring.io/guides/gs/authenticating-ldap/)
+24: * [Validation](https://spring.io/guides/gs/validating-form-input/)
+25: * [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
+26: * [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
+27: * [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
+28: 
+29: ### Maven Parent overrides
+30: 
+31: Due to Maven's design, elements are inherited from the parent POM to the project POM.
+32: While most of the inheritance is fine, it also inherits unwanted elements like `<license>` and `<developers>` from the
+33: parent.
+34: To prevent this, the project POM contains empty overrides for these elements.
+35: If you manually switch to a different parent and actually want the inheritance, you need to remove those overrides.
+36: 
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "**/*.{puml,plantuml,drawio,mmd}",
+  "hidden": true
+}
+```
+
+No files found
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "path": "src/test/java/com/example/tenisclubreservations/TenisClubReservationsApplicationTests.java"
+}
+```
+
+Read file src/test/java/com/example/tenisclubreservations/TenisClubReservationsApplicationTests.java, lines 1-13
+1: package com.example.tenisclubreservations;
+2: 
+3: import org.junit.jupiter.api.Test;
+4: import org.springframework.boot.test.context.SpringBootTest;
+5: 
+6: @SpringBootTest
+7: class TenisClubReservationsApplicationTests {
+8: 
+9:     @Test
+10:     void contextLoads() {
+11:     }
+12: 
+13: }
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "{CLAUDE.md,.cursorrules,.github/copilot-instructions.md,opencode.json,opencode.jsonc}",
+  "hidden": true
+}
+```
+
+No files found
+
+---
+
+## Assistant
+
+_Thinking:_
+
+
+
+**Tool: patch**
+
+**Input:**
+```json
+{
+  "patchText": "*** Begin Patch\n*** Add File: AGENTS.md\n+# Repository guidance\n+\n+## Build and tests\n+- Use Java 25 and the Maven Wrapper. Validate changes with `./mvnw clean verify` (also the CI command).\n+- Run a focused test with `./mvnw -Dtest=ClassName test` or `./mvnw -Dtest=ClassName#methodName test`.\n+- Write unit and integration tests targeting at least 90% code coverage. The current build does not configure a coverage tool or enforce this threshold.\n+\n+## Application conventions\n+- Use Spring Boot, JPA/Hibernate and the in-memory H2 database. Implement DAOs manually with JPA `EntityManager`; do not use Spring Data `JpaRepository` or `CrudRepository` for DAOs, even though the JPA starter is present.\n+- Manage schema changes with Liquibase via `src/main/resources/db/changelog/db.changelog-master.yaml`. Keep Hibernate's existing `ddl-auto: validate` configuration unchanged.\n+- Prefix all REST endpoints with `/api`. Use request and response DTOs, thin controllers, service-layer business logic and constructor injection.\n+- Apply SOLID pragmatically: favor simple, explicit, readable and testable code over overengineering.\n+- Keep UML diagrams up to date as the implementation evolves.\n*** End Patch"
+}
+```
+
+Success. Updated the following files:
+A AGENTS.md
+
+---
+
+## Assistant
+
+Created `AGENTS.md` with the requested repository conventions, Maven commands, testing target, and Liquibase and Hibernate guidance.
+
+Tests were not run because this was a documentation-only change.
