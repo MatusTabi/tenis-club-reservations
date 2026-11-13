@@ -1,3 +1,7 @@
 spring:
   application:
     name: tenis-club-reservations
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
