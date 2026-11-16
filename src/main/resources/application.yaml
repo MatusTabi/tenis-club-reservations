@@ -5,3 +5,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+  jackson:
+    deserialization:
+      use-big-decimal-for-floats: true
