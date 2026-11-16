@@ -3,7 +3,7 @@
 ## Build and tests
 - Use Java 25 and the Maven Wrapper. Validate changes with `./mvnw clean verify` (also the CI command).
 - Run a focused test with `./mvnw -Dtest=ClassName test` or `./mvnw -Dtest=ClassName#methodName test`.
-- Write unit and integration tests targeting at least 90% code coverage. The current build does not configure a coverage tool or enforce this threshold.
+- Follow the implementation testing stages and exception process in `docs/orchestration.md`. Use Mockito when mocking dependencies is useful in unit tests.
 
 ## Application conventions
 - When designing or implementing functionality, consult the applicable UML diagrams in `diagrams/` and follow them. If the diagrams are unavailable or conflict with the requested work, flag the discrepancy before assuming a resolution.
@@ -15,6 +15,8 @@
 
 ## Coding style
 - Follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html) and [Spring Framework code style](https://github.com/spring-projects/spring-framework/blob/main/CONTRIBUTING.md); prefer Spring's style where they conflict.
+- Use Lombok for suitable Java boilerplate, such as constructors and accessors.
+- Structure tests clearly using Arrange, Act, and Assert where appropriate; add comments when they improve readability.
 
 ## Agentic workflow
 - Follow `docs/orchestration.md` for the development pipeline.
