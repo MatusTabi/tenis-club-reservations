@@ -1,0 +1,29 @@
+# BET-002 design: court reservations
+
+## Scope
+
+Implement [BET-002](BET-002.md) and [ADR-004](../adr/ADR-004.md). Follow the class diagram and existing API conventions. In accordance with [ADR-001](../adr/ADR-001.md), endpoints remain unauthenticated; reservation names and phone numbers are sensitive and the API must not be exposed to untrusted users. Seed behavior in ADR-002 is unchanged.
+
+## API
+
+- `POST /api/reservations` creates; `GET /api/reservations/{id}` retrieves; `PUT`, `PATCH`, and `DELETE` at the same ID update or delete. Creation returns 201, Location and the complete representation including `totalPrice`; GET and updates return 200; DELETE returns 204.
+- `GET /api/courts/{courtNumber}/reservations` lists for the active court number, not court ID. `GET /api/reservations` lists all reservations; optional `phoneNumber` filters by phone, and optional `futureOnly` defaults to false and when true includes only reservations starting strictly after now. An explicitly blank phone number is invalid rather than treated as an omitted filter. All listings sort by creation time descending then ID descending; court listing returns 404 for a missing active court and other listings return an empty list for no matches.
+- Input fields are `courtNumber`, `startTime`, `endTime`, `gameType`, `phoneNumber`, and `name`; game types are `SINGLES` and `DOUBLES`. Responses contain ID, those fields, `totalPrice`, `createdAt`, and `updatedAt`. Times use explicit offsets and represent instants; input seconds and fractional seconds must be zero and the resulting instant must be minute-aligned. Output timestamps include an offset, normalized to UTC.
+- PUT requires every field. PATCH requires a nonempty object, retains omitted fields, rejects unknown fields and explicit nulls, and requires `phoneNumber` and `name` together when either is supplied. Apply these validations to the complete resulting record. Names and phone numbers are trimmed and nonblank. Reject malformed timestamps, game types, integers, and invalid intervals with 400; missing or deleted resources return 404; overlaps, customer-name conflicts, started-reservation mutations, and blocked court deletion return 409.
+- At each operation capture the current instant once after acquiring the mutation guard where applicable. A start strictly after that instant is future; an end strictly after it is ongoing or future for court deletion. Intervals are half-open: overlap iff existing start < requested end and requested start < existing end. Exclude the reservation being updated and soft-deleted reservations.
+- An active historical reservation remains retrievable by ID and included in phone listings after its court is soft-deleted. Its response shows the retained court's last number, even if a new court reuses that number. Court-number listings still resolve only the active court and never mix the two courts' reservations.
+
+## Implementation
+
+- Add reservation and customer feature slices with JPA entities, manually implemented EntityManager DAOs, service business logic, request and response DTOs, and thin controllers. Add Liquibase schema changes and retain Hibernate validation. Store instants in UTC, the customer phone's unique trimmed value, and the rounded reservation price. Retain soft-deleted reservations and court references.
+- Store total price as at least `DECIMAL(9,2)`, enough for 180 minutes of doubles even at 9,999.99 CZK per minute, the existing database column's maximum; this does not change the existing API's 1,000.00 rate limit. Never reject a valid reservation due to insufficient price precision.
+- Use the existing transaction-scoped `MutationGuard` before checking or changing reservation, customer, court, or surface mutation state. Hold it until commit so conflicting creates, updates, deletes, court changes and rate changes cannot race. Find or create customers and persist reservations in the same transaction; a database unique phone constraint is a backstop. Failed operations leave neither customer nor reservation changes. Existing surface and court mutation guard usage remains in place.
+- A reservation update preserves its existing recorded price unless the effective court identity, start, end or game type changes; otherwise calculate with the currently assigned surface rate and round half up to two decimal places. A changed court number that resolves to the same court is not a court change. Validate stored numeric bounds rather than silently truncating values.
+- Court deletion checks for nondeleted reservations with end strictly after now while holding the guard. Court-number listings resolve the active court first and filter by court identity, not historical number. Retain original creation time on update; deleted reservations are excluded from normal reads.
+
+## Verification
+
+- Unit-test duration and timestamp boundaries, pricing and rounding, name and phone matching, update and PATCH rules, historical restrictions, overlap boundaries, and error paths.
+- Integration-test Liquibase and mappings, maximum-rate price calculation and persistence, ordering and filters, soft deletion, customer reuse and rollback, court renumbering and reuse, deletion restrictions, and concurrent competing reservations and customer creation. Verify historical ID and phone reads after court deletion and number reuse, and include court deletion and rate/court changes racing reservation mutations.
+- End-to-end tests start and stop the application and exercise creation, price, listings, conflict, updates and deletion over HTTP. Run focused tests and `./mvnw clean verify` on Java 25, verify test discovery, and report counts and any omitted test level.
+- Exercise all four combinations of omitted/present phone and false/true future-only filters, default behavior, blank phone rejection, stable ordering, deletion exclusion, and empty results in integration and HTTP tests.

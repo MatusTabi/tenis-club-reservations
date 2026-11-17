@@ -28,6 +28,14 @@ public class CourtDao {
         .getResultList();
   }
 
+  public Optional<Court> findByNumber(int number) {
+    return em.createQuery(
+            "select c from Court c join fetch c.surface where c.activeNumber = :number", Court.class)
+        .setParameter("number", number)
+        .getResultStream()
+        .findFirst();
+  }
+
   public boolean exists(int number, Long except) {
     return em.createQuery(
                 "select count(c) from Court c where c.activeNumber = :number and (:id is null or"
