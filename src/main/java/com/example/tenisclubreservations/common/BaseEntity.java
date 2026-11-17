@@ -8,6 +8,7 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import lombok.Getter;
 
 @Getter
@@ -27,16 +28,16 @@ public abstract class BaseEntity {
 
   @PrePersist
   void createTimestamps() {
-    createdAt = updatedAt = LocalDateTime.now();
+    createdAt = updatedAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   @PreUpdate
   void updateTimestamp() {
-    updatedAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public void softDelete() {
-    removedAt = LocalDateTime.now();
+    removedAt = LocalDateTime.now(ZoneOffset.UTC);
   }
 
   public boolean isDeleted() {
