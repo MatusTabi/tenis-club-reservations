@@ -3,9 +3,11 @@ package com.example.tenisclubreservations.court;
 import com.example.tenisclubreservations.common.ApiException;
 import com.example.tenisclubreservations.common.Input;
 import com.example.tenisclubreservations.common.MutationGuard;
+import com.example.tenisclubreservations.reservation.ReservationDao;
 import com.example.tenisclubreservations.surface.Surface;
 import com.example.tenisclubreservations.surface.SurfaceDao;
 import java.util.List;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class CourtService {
   private final CourtDao courts;
   private final SurfaceDao surfaces;
   private final MutationGuard guard;
+  private final ReservationDao reservations;
 
   private Court find(long id) {
     return courts
@@ -75,6 +78,11 @@ public class CourtService {
 
   public void delete(long id) {
     guard.lock();
-    find(id).softDelete();
+    Instant now = Instant.now();
+    Court court = find(id);
+    if (reservations.blocksCourtDeletion(id, now)) {
+      throw new ApiException(HttpStatus.CONFLICT, "Court has ongoing or future reservations");
+    }
+    court.softDelete();
   }
 }
