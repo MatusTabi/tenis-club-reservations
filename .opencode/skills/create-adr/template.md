@@ -4,7 +4,7 @@ Status: Proposed | Date: [YYYY-MM-DD] | Supersedes: [ADR-NNN or None]
 
 ## Context
 
-[Describe the problem, relevant constraints, and considered alternatives.]
+[Describe the problem, relevant constraints, and any considered alternatives.]
 
 ## Decision
 
