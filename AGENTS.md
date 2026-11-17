@@ -11,6 +11,7 @@
 - Use Spring Boot, JPA/Hibernate and the in-memory H2 database. Implement DAOs manually with JPA `EntityManager`; do not use Spring Data `JpaRepository` or `CrudRepository` for DAOs, even though the JPA starter is present.
 - Manage schema changes with Liquibase via `src/main/resources/db/changelog/db.changelog-master.yaml`. Keep Hibernate's existing `ddl-auto: validate` configuration unchanged.
 - Prefix all REST endpoints with `/api`. Use request and response DTOs, thin controllers, service-layer business logic and constructor injection.
+- When writing or updating controllers, document every affected operation in OpenAPI, including parameters, request and response bodies, and applicable success and error responses; keep the documentation aligned with behavior.
 - Apply SOLID pragmatically: favor simple, explicit, readable and testable code over overengineering.
 
 ## Coding style
