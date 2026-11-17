@@ -2,6 +2,10 @@ spring:
   application:
     name: tenis-club-reservations
 
+  liquibase:
+    parameters:
+      seed-enabled: ${SEED_DATA_ENABLED:false}
+
   jpa:
     hibernate:
       ddl-auto: validate
