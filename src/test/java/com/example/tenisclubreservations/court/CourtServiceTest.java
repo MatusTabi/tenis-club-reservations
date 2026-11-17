@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.tenisclubreservations.common.ApiException;
 import com.example.tenisclubreservations.common.MutationGuard;
+import com.example.tenisclubreservations.reservation.ReservationDao;
 import com.example.tenisclubreservations.surface.Surface;
 import com.example.tenisclubreservations.surface.SurfaceDao;
 import java.math.BigDecimal;
@@ -36,7 +37,8 @@ class CourtServiceTest {
   private final CourtDao courts = mock(CourtDao.class);
   private final SurfaceDao surfaces = mock(SurfaceDao.class);
   private final MutationGuard guard = mock(MutationGuard.class);
-  private final CourtService service = new CourtService(courts, surfaces, guard);
+  private final ReservationDao reservations = mock(ReservationDao.class);
+  private final CourtService service = new CourtService(courts, surfaces, guard, reservations);
 
   private Surface surface(long id, String name) {
     var surface = new Surface();
