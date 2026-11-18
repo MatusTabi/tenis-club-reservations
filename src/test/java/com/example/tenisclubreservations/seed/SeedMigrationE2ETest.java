@@ -38,8 +38,9 @@ class SeedMigrationE2ETest {
     Process process = builder.start();
     try {
       var client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(500)).build();
-      String courts = getWhenReady(client, port, "/api/courts", process);
-      String surfaces = getWhenReady(client, port, "/api/surfaces", process);
+      String token = loginWhenReady(client, port, process);
+      String courts = getWhenReady(client, port, "/api/courts", process, token);
+      String surfaces = getWhenReady(client, port, "/api/surfaces", process, token);
       if (enabled) {
         assertTrue(courts.contains("Clay") && courts.contains("Hard"), courts);
         assertTrue(surfaces.contains("3.60") && surfaces.contains("5.00"), surfaces);
@@ -56,10 +57,26 @@ class SeedMigrationE2ETest {
     }
   }
 
-  private String getWhenReady(HttpClient client, int port, String path, Process process)
+  private String loginWhenReady(HttpClient client, int port, Process process) throws Exception {
+    var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/auth/login"))
+        .header("Authorization", "Basic YWRtaW46YWRtaW4=").POST(HttpRequest.BodyPublishers.noBody()).build();
+    long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+    while (System.nanoTime() < deadline && process.isAlive()) {
+      try {
+        var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        return response.headers().firstValue("Authorization").orElseThrow();
+      } catch (java.io.IOException e) {
+        Thread.sleep(100);
+      }
+    }
+    throw new AssertionError("Application did not start on port " + port);
+  }
+
+  private String getWhenReady(HttpClient client, int port, String path, Process process, String token)
       throws Exception {
     var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
-        .timeout(Duration.ofSeconds(2)).GET().build();
+        .timeout(Duration.ofSeconds(2)).header("Authorization", token).GET().build();
     long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
     while (System.nanoTime() < deadline && process.isAlive()) {
       try {

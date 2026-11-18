@@ -10,16 +10,20 @@ import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.example.tenisclubreservations.auth.TokenService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CourtSurfaceE2ETest {
   @LocalServerPort int port;
+  @Autowired TokenService tokens;
   private final HttpClient client = HttpClient.newHttpClient();
 
   private HttpResponse<String> request(String method, String path, String body) throws Exception {
     var builder =
         HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
-            .header("Content-Type", "application/json");
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer " + tokens.login("admin", "admin"));
     return client.send(
         builder
             .method(

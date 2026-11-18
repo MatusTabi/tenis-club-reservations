@@ -13,16 +13,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import com.example.tenisclubreservations.auth.TokenService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ReservationE2ETest {
   @LocalServerPort int port;
   @Autowired JdbcTemplate jdbc;
+  @Autowired TokenService tokens;
   private final HttpClient client = HttpClient.newHttpClient();
 
   private HttpResponse<String> request(String method, String path, String body) throws Exception {
     return client.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
         .header("Content-Type", "application/json")
+        .header("Authorization", "Bearer " + tokens.login("admin", "admin"))
         .method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body))
         .build(), HttpResponse.BodyHandlers.ofString());
   }
